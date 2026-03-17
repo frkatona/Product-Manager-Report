@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Launch Gantt Chart</title>
+  <style>
+    :root {
+      --bg-top: #f7efe2;
+      --bg-mid: #d9efe8;
+      --bg-bottom: #fdf9f1;
+      --panel: rgba(255, 255, 255, 0.8);
+      --panel-strong: rgba(255, 255, 255, 0.92);
+      --ink: #18363a;
+      --muted: #64777a;
+      --grid: rgba(24, 54, 58, 0.08);
+      --track: rgba(228, 238, 235, 0.92);
+      --phase-build: rgba(244, 162, 97, 0.22);
+      --phase-launch: rgba(27, 153, 139, 0.18);
+      --shadow: 0 24px 70px rgba(24, 54, 58, 0.12);
+      --day-count: 14;
+      --label-width: 320px;
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Avenir Next", "Gill Sans", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 35%),
+        linear-gradient(140deg, var(--bg-top) 0%, var(--bg-mid) 48%, var(--bg-bottom) 100%);
+      padding: 40px 24px;
+    }
+
+    .shell {
+      max-width: 1420px;
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .chart-wrap {
+      padding: 22px 22px 28px;
+    }
+
+    .chip-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .chart {
+      position: relative;
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.8));
+      border: 1px solid rgba(24, 54, 58, 0.08);
+      overflow: hidden;
+    }
+
+    .timeline-header {
+      position: relative;
+      display: grid;
+      grid-template-columns: var(--label-width) minmax(0, 1fr);
+      padding: 22px 20px 18px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 251, 250, 0.92));
+      border-bottom: 1px solid rgba(24, 54, 58, 0.08);
+    }
+
+    .header-label {
+      display: flex;
+      align-items: end;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding-left: 4px;
+    }
+
+    .timeline-frame {
+      position: relative;
+      min-height: 92px;
+    }
+
+    .phase-band {
+      position: absolute;
+      top: 0;
+      height: 40px;
+      border-radius: 16px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      border: 1px solid rgba(24, 54, 58, 0.06);
+      box-shadow: 0 10px 24px rgba(24, 54, 58, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .phase-build {
+      background: linear-gradient(135deg, rgba(244, 162, 97, 0.34), rgba(252, 236, 214, 0.88));
+    }
+
+    .phase-launch {
+      background: linear-gradient(135deg, rgba(27, 153, 139, 0.3), rgba(223, 243, 238, 0.92));
+    }
+
+    .day-grid {
+      position: absolute;
+      inset: 52px 0 0;
+      display: grid;
+      grid-template-columns: repeat(14, minmax(0, 1fr));
+      gap: 0;
+    }
+
+    .day-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding-top: 2px;
+      border-left: 1px solid var(--grid);
+    }
+
+    .day-cell:first-child {
+      border-left: none;
+    }
+
+    .day-num {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .day-caption {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .rows {
+      position: relative;
+      padding: 12px 20px 24px;
+    }
+
+    .section {
+      display: grid;
+      grid-template-columns: var(--label-width) minmax(0, 1fr);
+      align-items: center;
+      gap: 0;
+      padding: 14px 0 10px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .section-title::before {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 5px;
+      background: rgba(24, 54, 58, 0.12);
+      box-shadow: inset 0 0 0 5px rgba(255, 255, 255, 0.7);
+    }
+
+    .section-build .section-title::before {
+      background: rgba(244, 162, 97, 0.55);
+    }
+
+    .section-launch .section-title::before {
+      background: rgba(27, 153, 139, 0.52);
+    }
+
+    .section-track {
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(244, 162, 97, 0.22), rgba(27, 153, 139, 0.18));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section-track::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-size: calc(100% / var(--day-count)) 100%;
+      background-image: linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: var(--label-width) minmax(0, 1fr);
+      gap: 0;
+      align-items: stretch;
+      min-height: 78px;
+    }
+
+    .row + .row {
+      border-top: 1px solid rgba(24, 54, 58, 0.05);
+    }
+
+    .label {
+      padding: 16px 18px 16px 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .task-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .owner-chip,
+    .note-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(24, 54, 58, 0.08);
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .note-chip {
+      background: rgba(24, 54, 58, 0.05);
+    }
+
+    .track {
+      position: relative;
+      padding: 12px 0;
+      display: grid;
+      grid-template-columns: repeat(14, minmax(0, 1fr));
+      align-items: center;
+      background:
+        linear-gradient(90deg, transparent 0%, transparent 35.714%, var(--phase-build) 35.714%, var(--phase-build) 35.714%, transparent 35.714%, transparent 100%);
+    }
+
+    .track::before {
+      content: "";
+      position: absolute;
+      inset: 8px 0;
+      border-radius: 14px;
+      background-color: var(--track);
+      background-size: calc(100% / var(--day-count)) 100%;
+      background-image:
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(244, 162, 97, 0.16) 0%, rgba(244, 162, 97, 0.16) 35.714%, rgba(27, 153, 139, 0.14) 35.714%, rgba(27, 153, 139, 0.14) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .bar {
+      position: relative;
+      z-index: 2;
+      height: 34px;
+      margin: 0 5px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 14px 24px rgba(24, 54, 58, 0.16);
+      overflow: visible;
+      white-space: nowrap;
+    }
+
+    .bar::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 65%);
+      pointer-events: none;
+    }
+
+    .milestone {
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      background: #fff;
+      border: 2px solid rgba(24, 54, 58, 0.88);
+      transform: translateY(-50%) rotate(45deg);
+      box-shadow: 0 6px 14px rgba(24, 54, 58, 0.18);
+    }
+
+    .milestone-label {
+      position: absolute;
+      top: -34px;
+      right: -24px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(24, 54, 58, 0.88);
+      color: #fff;
+      font-size: 0.7rem;
+      letter-spacing: 0.03em;
+      box-shadow: 0 12px 24px rgba(24, 54, 58, 0.2);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 160ms ease, transform 160ms ease;
+      pointer-events: none;
+    }
+
+    .bar:hover .milestone-label {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .bar-label {
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-note {
+      padding: 16px 22px 22px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      border-top: 1px solid rgba(24, 54, 58, 0.08);
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    @media (max-width: 1100px) {
+      :root {
+        --label-width: 270px;
+      }
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 18px 12px;
+      }
+
+      .chart-wrap {
+        padding: 8px 10px 18px;
+      }
+
+      .chart-scroll {
+        overflow-x: auto;
+      }
+
+      .chart-scroll > * {
+        min-width: 980px;
+      }
+
+      .timeline-header,
+      .rows {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="chart-wrap">
+      <div class="chart-scroll">
+        <div class="chart">
+          <div class="timeline-header">
+            <div class="header-label">Workstream</div>
+            <div class="timeline-frame">
+              <div class="phase-band phase-build" id="phase-build">Build Phase - Days 1-5</div>
+              <div class="phase-band phase-launch" id="phase-launch">Launch Phase - Days 6-14</div>
+              <div class="day-grid" id="day-grid"></div>
+            </div>
+          </div>
+          <div class="rows" id="rows"></div>
+          <div class="footer-note">
+            Diamonds mark milestone completions. Dependency notes capture gating relationships from the original timeline.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const ownerColors = {
+      "Product": "#1b998b",
+      "Creative": "#f4a261",
+      "Marketing": "#e76f51",
+      "QA": "#577590",
+      "Operations": "#6f8f72",
+      "Growth": "#9c6644",
+      "Legal": "#7f5539",
+      "CEO / Product Lead": "#2b5a9e"
+    };
+
+    const sections = [
+      { id: "build", title: "Week 1 - Build Phase" },
+      { id: "launch", title: "Week 2 - Launch Phase" }
+    ];
+
+    const tasks = [
+      {
+        id: "spec-lock",
+        phase: "build",
+        title: "Finalize product specifications and compliance claims",
+        owners: ["Product"],
+        start: 1,
+        end: 1,
+        label: "Day 1",
+        milestone: "Spec Lock"
+      },
+      {
+        id: "photo",
+        phase: "build",
+        title: "Photography execution and main image selection",
+        owners: ["Creative"],
+        start: 1,
+        end: 2,
+        label: "Days 1-2",
+        dependsOn: ["Spec Lock"],
+        milestone: "Image Set Complete"
+      },
+      {
+        id: "seo",
+        phase: "build",
+        title: "Keyword research and SEO title draft",
+        owners: ["Marketing"],
+        start: 2,
+        end: 2,
+        label: "Day 2",
+        milestone: "SEO Draft"
+      },
+      {
+        id: "copy",
+        phase: "build",
+        title: "Bullet and description draft",
+        owners: ["Marketing"],
+        start: 3,
+        end: 3,
+        label: "Day 3",
+        dependsOn: ["SEO Draft"]
+      },
+      {
+        id: "infographic",
+        phase: "build",
+        title: "Listing infographic design",
+        owners: ["Creative"],
+        start: 3,
+        end: 4,
+        label: "Days 3-4",
+        dependsOn: ["Photography"]
+      },
+      {
+        id: "qa-round-1",
+        phase: "build",
+        title: "Internal listing QA (copy, specs, claims)",
+        owners: ["QA"],
+        start: 4,
+        end: 4,
+        label: "Day 4",
+        milestone: "QA Round 1"
+      },
+      {
+        id: "revisions",
+        phase: "build",
+        title: "Content revisions",
+        owners: ["Marketing", "Creative"],
+        start: 5,
+        end: 5,
+        label: "Day 5",
+        dependsOn: ["QA feedback"]
+      },
+      {
+        id: "inventory-greenlight",
+        phase: "build",
+        title: "Inventory readiness confirmation",
+        owners: ["Operations"],
+        start: 5,
+        end: 5,
+        label: "Day 5",
+        milestone: "Inventory Greenlight"
+      },
+      {
+        id: "upload-draft",
+        phase: "launch",
+        title: "Upload listing draft",
+        owners: ["Marketing"],
+        start: 6,
+        end: 6,
+        label: "Day 6"
+      },
+      {
+        id: "approval",
+        phase: "launch",
+        title: "Executive approval review",
+        owners: ["CEO / Product Lead"],
+        start: 7,
+        end: 7,
+        label: "Day 7"
+      },
+      {
+        id: "aplus",
+        phase: "launch",
+        title: "A+ content upload and indexing verification",
+        owners: ["Marketing"],
+        start: 7,
+        end: 8,
+        label: "Days 7-8"
+      },
+      {
+        id: "compliance",
+        phase: "launch",
+        title: "Compliance validation pass",
+        owners: ["QA", "Legal"],
+        start: 8,
+        end: 8,
+        label: "Day 8"
+      },
+      {
+        id: "inventory-inbound",
+        phase: "launch",
+        title: "Inventory inbound confirmation",
+        owners: ["Operations"],
+        start: 9,
+        end: 9,
+        label: "Day 9"
+      },
+      {
+        id: "ppc",
+        phase: "launch",
+        title: "PPC campaign build",
+        owners: ["Growth"],
+        start: 10,
+        end: 10,
+        label: "Day 10"
+      },
+      {
+        id: "publication",
+        phase: "launch",
+        title: "Listing publication",
+        owners: ["Marketing"],
+        start: 11,
+        end: 11,
+        label: "Day 11"
+      },
+      {
+        id: "monitoring",
+        phase: "launch",
+        title: "Early performance monitoring and optimization",
+        owners: ["Growth", "Product"],
+        start: 12,
+        end: 14,
+        label: "Days 12-14"
+      }
+    ];
+
+    const dayGrid = document.getElementById("day-grid");
+    const rows = document.getElementById("rows");
+
+    function createDayHeader() {
+      for (let day = 1; day <= 14; day += 1) {
+        const cell = document.createElement("div");
+        cell.className = "day-cell";
+        cell.innerHTML = `
+          <div class="day-num">${day}</div>
+          <div class="day-caption">Day</div>
+        `;
+        dayGrid.appendChild(cell);
+      }
+    }
+
+    function ownerGradient(owners) {
+      const colors = owners.map((owner) => ownerColors[owner] || "#18363a");
+      if (colors.length === 1) {
+        return `linear-gradient(135deg, ${colors[0]}, ${shade(colors[0], -16)})`;
+      }
+
+      const stops = colors
+        .map((color, index) => `${color} ${(index / colors.length) * 100}% ${(index + 1) / colors.length * 100}%`)
+        .join(", ");
+
+      return `linear-gradient(135deg, ${stops})`;
+    }
+
+    function shade(hex, percent) {
+      const value = hex.replace("#", "");
+      const num = parseInt(value, 16);
+      const amt = Math.round(2.55 * percent);
+      const r = Math.min(255, Math.max(0, (num >> 16) + amt));
+      const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amt));
+      const b = Math.min(255, Math.max(0, (num & 0x0000ff) + amt));
+      return `#${(0x1000000 + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
+
+    function renderSections() {
+      sections.forEach((section) => {
+        const divider = document.createElement("div");
+        divider.className = `section section-${section.id}`;
+        divider.innerHTML = `
+          <div class="section-title">${section.title}</div>
+          <div class="section-track"></div>
+        `;
+        rows.appendChild(divider);
+
+        tasks
+          .filter((task) => task.phase === section.id)
+          .forEach((task) => {
+            rows.appendChild(renderTask(task));
+          });
+      });
+    }
+
+    function renderTask(task) {
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const label = document.createElement("div");
+      label.className = "label";
+
+      const ownerMarkup = task.owners
+        .map((owner) => `<span class="owner-chip"><span class="chip-swatch" style="background:${ownerColors[owner] || "#18363a"}"></span>${owner}</span>`)
+        .join("");
+
+      const noteMarkup = [];
+      if (task.dependsOn) {
+        noteMarkup.push(`<span class="note-chip">Depends on ${task.dependsOn.join(" + ")}</span>`);
+      }
+      if (task.milestone) {
+        noteMarkup.push(`<span class="note-chip">Milestone: ${task.milestone}</span>`);
+      }
+
+      label.innerHTML = `
+        <div class="task-title">${task.title}</div>
+        <div class="meta-line">${ownerMarkup}</div>
+        <div class="meta-line">${noteMarkup.join("")}</div>
+      `;
+
+      const track = document.createElement("div");
+      track.className = "track";
+
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      bar.style.gridColumn = `${task.start} / ${task.end + 1}`;
+      bar.style.background = ownerGradient(task.owners);
+      bar.innerHTML = `<span class="bar-label">${task.label}</span>`;
+
+      if (task.milestone) {
+        const milestone = document.createElement("div");
+        milestone.className = "milestone";
+        milestone.setAttribute("aria-hidden", "true");
+        const milestoneLabel = document.createElement("div");
+        milestoneLabel.className = "milestone-label";
+        milestoneLabel.textContent = task.milestone;
+        bar.appendChild(milestone);
+        bar.appendChild(milestoneLabel);
+      }
+
+      track.appendChild(bar);
+      row.appendChild(label);
+      row.appendChild(track);
+      return row;
+    }
+
+    function positionPhaseBands() {
+      const build = document.getElementById("phase-build");
+      const launch = document.getElementById("phase-launch");
+      const startOffset = 0;
+      const width = 100 / 14;
+
+      build.style.left = `${startOffset}%`;
+      build.style.width = `${width * 5}%`;
+
+      launch.style.left = `${width * 5}%`;
+      launch.style.width = `${width * 9}%`;
+    }
+
+    createDayHeader();
+    renderSections();
+    positionPhaseBands();
+  </script>
+</body>
+</html>
