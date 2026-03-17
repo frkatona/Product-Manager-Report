@@ -123,6 +123,7 @@
       overflow: hidden;
       display: flex;
       align-items: center;
+      justify-content: center;
       padding: 52px 48px;
       min-height: calc(100vh - var(--topbar-offset) - 28px);
       min-height: calc(100svh - var(--topbar-offset) - 28px);
@@ -133,6 +134,10 @@
       border: 1px solid rgba(255, 255, 255, 0.7);
       box-shadow: 0 18px 44px rgba(27, 53, 58, 0.08);
       backdrop-filter: blur(18px);
+    }
+
+    .hero-copy {
+      width: min(100%, 860px);
     }
 
     .hero::after {
@@ -689,10 +694,6 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="topbar-brand">Pre-launch Report (Pre-K Flashcards)</div>
-      <div class="topbar-status" aria-live="polite">
-        <img src="balloon.png" alt="" aria-hidden="true">
-        <span id="current-section-label">Overview</span>
-      </div>
       <nav class="topbar-nav" aria-label="Section navigation">
         <a class="topbar-link" href="#overview">Overview</a>
         <a class="topbar-link" href="#timeline">Timeline</a>
@@ -717,20 +718,6 @@
           claims before creative handoff, and enforcing a tighter QA pass on titles, imagery, and conversion copy.
         </p>
       </div>
-      <aside class="hero-panel">
-        <article class="signal-card ready">
-          <strong>14-day sprint</strong>
-          <span>Launch sequence is operationally viable with clear ownership and gating.</span>
-        </article>
-        <article class="signal-card alert">
-          <strong>Moderate launch risk</strong>
-          <p>Primary concerns are claim inconsistency, keyword-stacked copy, and listing asset defects.</p>
-        </article>
-        <article class="signal-card">
-          <strong>Decision posture</strong>
-          <span>Publish after readiness gate approval across Product, Marketing, QA, and Operations.</span>
-        </article>
-      </aside>
     </section>
 
     <section class="report-section" id="timeline">
@@ -1224,7 +1211,6 @@
 
     function setupSectionNavigation() {
       const navLinks = Array.from(document.querySelectorAll(".topbar-link"));
-      const currentSectionLabel = document.getElementById("current-section-label");
       const sections = navLinks
         .map((link) => {
           const section = document.querySelector(link.getAttribute("href"));
@@ -1236,11 +1222,6 @@
         sections.forEach(({ link, section }) => {
           link.classList.toggle("is-active", `#${section.id}` === activeId);
         });
-
-        const activeSection = sections.find(({ section }) => `#${section.id}` === activeId);
-        if (activeSection && currentSectionLabel) {
-          currentSectionLabel.textContent = activeSection.link.textContent.trim();
-        }
       }
 
       setActive("#overview");
